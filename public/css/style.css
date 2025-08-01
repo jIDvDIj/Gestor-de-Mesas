@@ -1,0 +1,206 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.login-container {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 300px;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.input-group {
+    margin-bottom: 1rem;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.error-message {
+    color: #d9534f;
+    text-align: center;
+    margin-top: 1rem;
+    height: 1em;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 1rem;
+}
+
+#mesas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.mesa {
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 1.2rem;
+    color: #fff;
+    cursor: pointer;
+}
+
+.mesa.livre {
+    background-color: #28a745;
+}
+
+.mesa.ocupada {
+    background-color: #dc3545;
+}
+
+.gestao-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.gestao-section h2 {
+    margin-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.gestao-section form {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.gestao-section input {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.gestao-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.gestao-section li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.gestao-section li button {
+    background-color: #d9534f;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#comanda-itens {
+    margin-bottom: 2rem;
+}
+
+.comanda-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.comanda-item input[type="checkbox"] {
+    margin-right: 1rem;
+}
+
+.comanda-item button {
+    margin-left: auto;
+    background-color: #d9534f;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#total-comanda {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: right;
+    margin-bottom: 1rem;
+}
+
+#funcionario-controls form, #cliente-controls {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+#itens-a-pagar {
+    margin-bottom: 2rem;
+}
+
+#total-a-pagar {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: right;
+    margin-bottom: 2rem;
+}
+
+#confirmar-pagamento-button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.2rem;
+}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Página de Gestão</h1>
+            <button onclick="window.location.href='mesas.html'">Voltar para Mesas</button>
+        </header>
+        <main>
+            <div class="gestao-section">
+                <h2>Mesas</h2>
+                <form id="add-mesa-form">
+                    <input type="number" id="mesa-numero" placeholder="Número da mesa" required>
+                    <button type="submit">Adicionar Mesa</button>
+                </form>
+                <ul id="mesas-list"></ul>
+            </div>
+            <div class="gestao-section">
+                <h2>Funcionários</h2>
+                <form id="add-funcionario-form">
+                    <input type="text" id="funcionario-nome" placeholder="Nome" required>
+                    <input type="password" id="funcionario-senha" placeholder="Senha" required>
+                    <button type="submit">Adicionar Funcionário</button>
+                </form>
+                <ul id="funcionarios-list"></ul>
+            </div>
+            <div class="gestao-section">
+                <h2>Produtos</h2>
+                <form id="add-produto-form">
+                    <input type="text" id="produto-nome" placeholder="Nome do produto" required>
+                    <input type="number" id="produto-preco" placeholder="Preço" step="0.01" required>
+                    <button type="submit">Adicionar Produto</button>
+                </form>
+                <ul id="produtos-list"></ul>
+            </div>
+        </main>
+    </div>
+    <script src="js/gestao.js"></script>
+</body>
+</html>
