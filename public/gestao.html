@@ -26,6 +26,10 @@
                 <form id="add-funcionario-form">
                     <input type="text" id="funcionario-nome" placeholder="Nome" required>
                     <input type="password" id="funcionario-senha" placeholder="Senha" required>
+                    <select id="funcionario-cargo" required>
+                        <option value="funcionario">Funcionário</option>
+                        <option value="gerente">Gerente</option>
+                    </select>
                     <button type="submit">Adicionar Funcionário</button>
                 </form>
                 <ul id="funcionarios-list"></ul>
@@ -38,6 +42,11 @@
                     <button type="submit">Adicionar Produto</button>
                 </form>
                 <ul id="produtos-list"></ul>
+            </div>
+            <div class="gestao-section">
+                <h2>Relatórios</h2>
+                <button id="gerar-relatorio-btn">Gerar Relatório de Vendas</button>
+                <div id="relatorio-resultado"></div>
             </div>
         </main>
     </div>

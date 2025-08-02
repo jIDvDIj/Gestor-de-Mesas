@@ -6,83 +6,172 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Gerenciamento de Mesas
+    // --- Gerenciamento de Mesas ---
     const addMesaForm = document.getElementById('add-mesa-form');
     const mesaNumeroInput = document.getElementById('mesa-numero');
     const mesasList = document.getElementById('mesas-list');
 
-    let mesas = [
-        { id: 1, numero: 1 },
-        { id: 2, numero: 2 },
-        { id: 3, numero: 3 },
-        { id: 4, numero: 4 },
-        { id: 5, numero: 5 },
-    ];
+    async function carregarMesas() {
+        try {
+            const response = await fetch('http://localhost:3000/api/mesas');
+            const mesas = await response.json();
+            renderMesas(mesas);
+        } catch (error) {
+            console.error('Erro ao carregar mesas:', error);
+        }
+    }
 
-    function renderMesas() {
+    function renderMesas(mesas) {
         mesasList.innerHTML = '';
         mesas.forEach(mesa => {
             const li = document.createElement('li');
-            li.textContent = `Mesa ${mesa.numero}`;
+            li.innerHTML = `<span>Mesa ${mesa.numero}</span>`;
+
+            const linkButton = document.createElement('button');
+            linkButton.textContent = 'Gerar Link';
+            linkButton.onclick = () => {
+                const url = `${window.location.origin}/public/comanda.html?mesa=${mesa.id}`;
+                prompt(`Link de acesso para a Mesa ${mesa.numero}:`, url);
+            };
+
             const removeButton = document.createElement('button');
             removeButton.textContent = 'Remover';
-            removeButton.onclick = () => {
-                mesas = mesas.filter(m => m.id !== mesa.id);
-                renderMesas();
-            };
-            li.appendChild(removeButton);
+            removeButton.onclick = () => removerMesa(mesa.id);
+
+            const divBotoes = document.createElement('div');
+            divBotoes.appendChild(linkButton);
+            divBotoes.appendChild(removeButton);
+            li.appendChild(divBotoes);
+
             mesasList.appendChild(li);
         });
     }
 
-    addMesaForm.addEventListener('submit', (e) => {
+    addMesaForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newMesa = {
-            id: Date.now(),
-            numero: parseInt(mesaNumeroInput.value),
-        };
-        mesas.push(newMesa);
-        renderMesas();
-        mesaNumeroInput.value = '';
+        const numero = parseInt(mesaNumeroInput.value);
+        try {
+            await fetch('http://localhost:3000/api/mesas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ numero }),
+            });
+            mesaNumeroInput.value = '';
+            carregarMesas();
+        } catch (error) {
+            console.error('Erro ao adicionar mesa:', error);
+        }
     });
 
-    // Gerenciamento de Funcionários
+    async function removerMesa(id) {
+        if (confirm(`Tem certeza que deseja remover a mesa ${id}?`)) {
+            try {
+                await fetch(`http://localhost:3000/api/mesas/${id}`, { method: 'DELETE' });
+                carregarMesas();
+            } catch (error) {
+                console.error('Erro ao remover mesa:', error);
+            }
+        }
+    }
+
+    // --- Gerenciamento de Funcionários ---
     const addFuncionarioForm = document.getElementById('add-funcionario-form');
     const funcionarioNomeInput = document.getElementById('funcionario-nome');
     const funcionarioSenhaInput = document.getElementById('funcionario-senha');
+    const funcionarioCargoSelect = document.getElementById('funcionario-cargo');
     const funcionariosList = document.getElementById('funcionarios-list');
 
-    let funcionarios = [
-        { id: 1, nome: 'funcionario1' },
-    ];
+    async function carregarFuncionarios() {
+        try {
+            const response = await fetch('http://localhost:3000/api/usuarios');
+            const funcionarios = await response.json();
+            renderFuncionarios(funcionarios);
+        } catch (error) {
+            console.error('Erro ao carregar funcionários:', error);
+        }
+    }
 
-    function renderFuncionarios() {
+    function renderFuncionarios(funcionarios) {
         funcionariosList.innerHTML = '';
         funcionarios.forEach(func => {
             const li = document.createElement('li');
-            li.textContent = func.nome;
-            const removeButton = document.createElement('button');
-            removeButton.textContent = 'Remover';
-            removeButton.onclick = () => {
-                funcionarios = funcionarios.filter(f => f.id !== func.id);
-                renderFuncionarios();
-            };
-            li.appendChild(removeButton);
+            li.innerHTML = `
+                <span>${func.nome} - <strong>${func.cargo}</strong></span>
+                <div>
+                    <button class="edit-btn" data-id="${func.id}" data-cargo="${func.cargo}">Editar Cargo</button>
+                    <button class="delete-btn" data-id="${func.id}">Remover</button>
+                </div>
+            `;
             funcionariosList.appendChild(li);
         });
+
+        document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', editarUsuario));
+        document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', removerFuncionario));
     }
 
-    addFuncionarioForm.addEventListener('submit', (e) => {
+    addFuncionarioForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newFuncionario = {
-            id: Date.now(),
-            nome: funcionarioNomeInput.value,
-        };
-        funcionarios.push(newFuncionario);
-        renderFuncionarios();
-        funcionarioNomeInput.value = '';
-        funcionarioSenhaInput.value = '';
+        const nome = funcionarioNomeInput.value;
+        const senha = funcionarioSenhaInput.value;
+        const cargo = funcionarioCargoSelect.value;
+
+        try {
+            await fetch('http://localhost:3000/api/usuarios', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nome, senha, cargo }),
+            });
+            funcionarioNomeInput.value = '';
+            funcionarioSenhaInput.value = '';
+            carregarFuncionarios();
+        } catch (error) {
+            console.error('Erro ao adicionar funcionário:', error);
+        }
     });
+
+    async function editarUsuario(event) {
+        const id = event.target.dataset.id;
+        const nomeAtual = event.target.parentElement.parentElement.querySelector('span').textContent.split(' - ')[0];
+
+        const novoNome = prompt('Novo nome:', nomeAtual);
+        if (!novoNome) return;
+
+        const novaSenha = prompt('Nova senha (deixe em branco para não alterar):');
+
+        let novoCargo = prompt('Novo cargo (funcionario ou gerente):', event.target.dataset.cargo);
+        while(novoCargo && novoCargo !== 'funcionario' && novoCargo !== 'gerente') {
+            novoCargo = prompt('Cargo inválido. Digite "funcionario" ou "gerente":');
+        }
+        if (!novoCargo) return;
+
+        const data = { nome: novoNome, cargo: novoCargo };
+        if (novaSenha) {
+            data.senha = novaSenha;
+        }
+
+        try {
+            await fetch(`http://localhost:3000/api/usuarios/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            carregarFuncionarios();
+        } catch (error) {
+            console.error('Erro ao editar usuário:', error);
+        }
+    }
+
+    async function removerFuncionario(event) {
+        const id = event.target.dataset.id;
+        if (confirm('Tem certeza que deseja remover este funcionário?')) {
+            try {
+                await fetch(`http://localhost:3000/api/usuarios/${id}`, { method: 'DELETE' });
+                carregarFuncionarios();
+            } catch (error) {
+                console.error('Erro ao remover funcionário:', error);
+            }
+        }
+    }
 
     // --- Gerenciamento de Produtos ---
     const addProdutoForm = document.getElementById('add-produto-form');
@@ -138,7 +227,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    renderMesas();
-    renderFuncionarios();
+    // --- Relatórios ---
+    const gerarRelatorioBtn = document.getElementById('gerar-relatorio-btn');
+    const relatorioResultadoDiv = document.getElementById('relatorio-resultado');
+
+    gerarRelatorioBtn.addEventListener('click', async () => {
+        try {
+            const response = await fetch('http://localhost:3000/api/relatorio-vendas');
+            const relatorio = await response.json();
+
+            let html = `<h4>Total Geral: R$ ${relatorio.totalGeral.toFixed(2)}</h4><ul>`;
+            relatorio.detalhes.forEach(detalhe => {
+                html += `<li>${detalhe.forma_pagamento}: R$ ${detalhe.total_vendido.toFixed(2)}</li>`;
+            });
+            html += '</ul>';
+
+            relatorioResultadoDiv.innerHTML = html;
+        } catch (error) {
+            console.error('Erro ao gerar relatório:', error);
+            relatorioResultadoDiv.innerHTML = '<p>Não foi possível gerar o relatório.</p>';
+        }
+    });
+
+    carregarMesas();
+    carregarFuncionarios();
     carregarProdutos();
 });

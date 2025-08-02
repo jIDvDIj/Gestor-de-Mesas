@@ -24,31 +24,52 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'login.html';
     });
 
-    async function carregarMesas() {
+    const filaPagamentosBtn = document.getElementById('fila-pagamentos-btn');
+
+    async function carregarStatusMesas() {
         try {
-            const response = await fetch('http://localhost:3000/api/mesas');
+            const response = await fetch('http://localhost:3000/api/status-mesas');
             const mesas = await response.json();
 
-            // TODO: A lógica de status (livre/ocupada) precisará ser implementada no backend
-            // Por enquanto, vamos simular o status no frontend
+            mesasGrid.innerHTML = ''; // Limpa o grid
+            let pagamentosPendentesCount = 0;
+
             mesas.forEach(mesa => {
+                if (mesa.pagamento_pendente) {
+                    pagamentosPendentesCount++;
+                }
                 const mesaElement = document.createElement('div');
-                // Simulação de status
-                const status = Math.random() > 0.5 ? 'ocupada' : 'livre';
-                mesaElement.className = `mesa ${status}`;
+                let statusClass = 'livre';
+                if (mesa.pagamento_pendente) statusClass = 'pagamento-pendente';
+                else if (mesa.ocupada) statusClass = 'ocupada';
+
+                mesaElement.className = `mesa ${statusClass}`;
                 mesaElement.textContent = `Mesa ${mesa.numero}`;
                 mesaElement.dataset.mesaId = mesa.id;
-
                 mesaElement.addEventListener('click', () => {
                     window.location.href = `comanda.html?mesa=${mesa.id}`;
                 });
                 mesasGrid.appendChild(mesaElement);
             });
+
+            // Atualiza o botão da fila de pagamentos
+            filaPagamentosBtn.textContent = `Fila de Pagamentos (${pagamentosPendentesCount})`;
+            if (pagamentosPendentesCount > 0) {
+                filaPagamentosBtn.classList.add('alerta');
+            } else {
+                filaPagamentosBtn.classList.remove('alerta');
+            }
+
         } catch (error) {
-            console.error('Erro ao carregar mesas:', error);
+            console.error('Erro ao carregar status das mesas:', error);
             mesasGrid.innerHTML = '<p>Não foi possível carregar as mesas.</p>';
         }
     }
 
-    carregarMesas();
+    filaPagamentosBtn.addEventListener('click', () => {
+        window.location.href = 'fila-pagamentos.html';
+    });
+
+    carregarStatusMesas();
+    setInterval(carregarStatusMesas, 10000); // Atualiza a cada 10 segundos
 });

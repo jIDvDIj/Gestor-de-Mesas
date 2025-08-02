@@ -52,22 +52,126 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// Endpoint para processar pagamento
-app.post('/api/pagamentos', (req, res) => {
-    const { itemIds } = req.body;
+// Endpoint para gerar relatório de vendas
+app.get('/api/relatorio-vendas', (req, res) => {
+    const sql = `
+        SELECT
+            forma_pagamento,
+            SUM(valor_total) as total_vendido
+        FROM pagamentos
+        WHERE status = 'confirmado'
+        GROUP BY forma_pagamento
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: 'Erro ao gerar relatório.' });
+        }
 
-    if (!itemIds || itemIds.length === 0) {
-        return res.status(400).json({ error: 'É necessário fornecer os IDs dos itens.' });
+        const relatorio = {
+            detalhes: rows,
+            totalGeral: rows.reduce((acc, row) => acc + row.total_vendido, 0)
+        };
+        res.json(relatorio);
+    });
+});
+
+// Endpoint para o FUNCIONÁRIO negar um pagamento
+app.post('/api/negar-pagamento/:pagamentoId', (req, res) => {
+    const { pagamentoId } = req.params;
+
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION;');
+
+        // Reverte o status dos itens
+        const updateItensSql = "UPDATE itens_comanda SET status = 'pendente', pagamento_id = NULL WHERE pagamento_id = ?";
+        db.run(updateItensSql, [pagamentoId], function(err) {
+            if (err) {
+                db.run('ROLLBACK;');
+                return res.status(500).json({ error: 'Erro ao reverter status dos itens.' });
+            }
+
+            // Deleta o registro de pagamento
+            const deletePagamentoSql = "DELETE FROM pagamentos WHERE id = ?";
+            db.run(deletePagamentoSql, [pagamentoId], function(err) {
+                if (err) {
+                    db.run('ROLLBACK;');
+                    return res.status(500).json({ error: 'Erro ao deletar pagamento.' });
+                }
+
+                db.run('COMMIT;');
+                res.json({ success: true, message: 'Pagamento negado com sucesso.' });
+            });
+        });
+    });
+});
+
+// Endpoint para o CLIENTE solicitar um pagamento
+app.post('/api/solicitar-pagamento', (req, res) => {
+    const { comandaId, itemIds, formaPagamento, valorTotal, nomeCliente } = req.body;
+
+    if (!comandaId || !itemIds || itemIds.length === 0 || !formaPagamento || !valorTotal || !nomeCliente) {
+        return res.status(400).json({ error: 'Todos os campos são obrigatórios para solicitar o pagamento.' });
     }
 
-    const placeholders = itemIds.map(() => '?').join(',');
-    const sql = `UPDATE itens_comanda SET pago = 1 WHERE id IN (${placeholders})`;
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION;');
 
-    db.run(sql, itemIds, function(err) {
-        if (err) {
-            return res.status(500).json({ error: 'Erro ao processar pagamento.' });
-        }
-        res.json({ success: true, message: 'Pagamento processado com sucesso.' });
+        const insertPagamentoSql = `
+            INSERT INTO pagamentos (comanda_id, forma_pagamento, status, valor_total, nome_cliente)
+            VALUES (?, ?, 'pendente', ?, ?)
+        `;
+        db.run(insertPagamentoSql, [comandaId, formaPagamento, valorTotal, nomeCliente], function(err) {
+            if (err) {
+                db.run('ROLLBACK;');
+                return res.status(500).json({ error: 'Erro ao criar registro de pagamento.' });
+            }
+
+            const pagamentoId = this.lastID;
+            const placeholders = itemIds.map(() => '?').join(',');
+            const updateItensSql = `
+                UPDATE itens_comanda
+                SET status = 'pagamento_solicitado', pagamento_id = ?
+                WHERE id IN (${placeholders})
+            `;
+
+            db.run(updateItensSql, [pagamentoId, ...itemIds], function(err) {
+                if (err) {
+                    db.run('ROLLBACK;');
+                    return res.status(500).json({ error: 'Erro ao atualizar status dos itens.' });
+                }
+
+                db.run('COMMIT;');
+                res.status(201).json({ success: true, pagamentoId });
+            });
+        });
+    });
+});
+
+// Endpoint para o FUNCIONÁRIO confirmar um pagamento
+app.post('/api/confirmar-pagamento/:pagamentoId', (req, res) => {
+    const { pagamentoId } = req.params;
+
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION;');
+
+        const updatePagamentoSql = "UPDATE pagamentos SET status = 'confirmado' WHERE id = ?";
+        db.run(updatePagamentoSql, [pagamentoId], function(err) {
+            if (err) {
+                db.run('ROLLBACK;');
+                return res.status(500).json({ error: 'Erro ao confirmar pagamento.' });
+            }
+
+            const updateItensSql = "UPDATE itens_comanda SET status = 'pago' WHERE pagamento_id = ?";
+            db.run(updateItensSql, [pagamentoId], function(err) {
+                if (err) {
+                    db.run('ROLLBACK;');
+                    return res.status(500).json({ error: 'Erro ao atualizar itens para pago.' });
+                }
+
+                db.run('COMMIT;');
+                res.json({ success: true, message: 'Pagamento confirmado com sucesso.' });
+            });
+        });
     });
 });
 
@@ -112,18 +216,42 @@ app.get('/api/comandas/:mesaId', (req, res) => {
             }
 
             const getItensSql = `
-                SELECT ic.id, ic.quantidade, ic.pago, p.nome, p.preco
+                SELECT ic.id, ic.quantidade, ic.status, ic.pagamento_id, p.nome, p.preco
                 FROM itens_comanda ic
                 JOIN produtos p ON ic.produto_id = p.id
                 WHERE ic.comanda_id = ?`;
 
             db.all(getItensSql, [comanda.id], (err, itens) => {
                 if (err) {
-                    return res.status(500).json({ error: 'Erro ao buscar itens da comanda.' });
+                    return res.status(500).json({ error: 'Erro ao buscar itens.' });
                 }
-                res.json({ comandaId: comanda.id, itens: itens });
+
+                const getPagamentosPendentesSql = `
+                    SELECT * FROM pagamentos WHERE comanda_id = ? AND status = 'pendente'
+                `;
+                db.all(getPagamentosPendentesSql, [comanda.id], (err, pagamentos) => {
+                    if (err) {
+                        return res.status(500).json({ error: 'Erro ao buscar pagamentos pendentes.' });
+                    }
+                    res.json({ comandaId: comanda.id, itens: itens, pagamentosPendentes: pagamentos });
+                });
             });
         });
+    });
+});
+
+// Endpoint para remover um item da comanda
+app.delete('/api/itens-comanda/:id', (req, res) => {
+    const { id } = req.params;
+    // Apenas permite deletar se o item ainda não foi pago ou solicitado
+    const sql = "DELETE FROM itens_comanda WHERE id = ? AND status = 'pendente'";
+
+    db.run(sql, id, function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        if (this.changes === 0) {
+            return res.status(403).json({ error: 'Não é possível remover um item com pagamento solicitado ou já pago.' });
+        }
+        res.json({ deleted: this.changes });
     });
 });
 
@@ -154,14 +282,142 @@ app.post('/api/produtos', (req, res) => {
     });
 });
 
-// Endpoint para buscar todas as mesas
-app.get('/api/mesas', (req, res) => {
-    const sql = 'SELECT * FROM mesas ORDER BY numero';
+// Endpoint para verificar status de todas as mesas
+app.get('/api/status-mesas', (req, res) => {
+    const sql = `
+        SELECT
+            m.id,
+            m.numero,
+            (SELECT COUNT(*) FROM itens_comanda ic JOIN comandas c ON ic.comanda_id = c.id WHERE c.mesa_id = m.id AND ic.status = 'pendente') > 0 as ocupada,
+            (SELECT COUNT(*) FROM itens_comanda ic JOIN comandas c ON ic.comanda_id = c.id WHERE c.mesa_id = m.id AND ic.status = 'pagamento_solicitado') > 0 as pagamento_pendente
+        FROM mesas m
+    `;
     db.all(sql, [], (err, rows) => {
         if (err) {
             return res.status(500).json({ error: 'Erro no servidor.' });
         }
         res.json(rows);
+    });
+});
+
+// Endpoint para verificar o estado de uma comanda com um hash
+app.get('/api/comandas/:mesaId/hash', (req, res) => {
+    const { mesaId } = req.params;
+    const sql = `
+        SELECT
+            GROUP_CONCAT(ic.id || '-' || ic.status || '-' || ic.quantidade) as hash
+        FROM itens_comanda ic
+        JOIN comandas c ON ic.comanda_id = c.id
+        WHERE c.mesa_id = ? AND c.fechada = 0
+    `;
+    db.get(sql, [mesaId], (err, row) => {
+        if (err) {
+            return res.status(500).json({ error: 'Erro ao gerar hash da comanda.' });
+        }
+        res.json({ hash: row ? row.hash : '' });
+    });
+});
+
+
+// Endpoint para buscar todos os pagamentos pendentes
+app.get('/api/pagamentos-pendentes', (req, res) => {
+    const sql = `
+        SELECT
+            p.id,
+            p.forma_pagamento,
+            p.valor_total,
+            p.nome_cliente,
+            p.comanda_id,
+            m.numero as mesa_numero
+        FROM pagamentos p
+        JOIN comandas c ON p.comanda_id = c.id
+        JOIN mesas m ON c.mesa_id = m.id
+        WHERE p.status = 'pendente'
+        ORDER BY p.id ASC
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: 'Erro ao buscar pagamentos pendentes.' });
+        }
+        res.json(rows);
+    });
+});
+
+// --- CRUD de Usuários ---
+app.get('/api/usuarios', (req, res) => {
+    db.all('SELECT id, nome, cargo FROM usuarios', [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/usuarios', (req, res) => {
+    const { nome, senha, cargo } = req.body;
+    if (!nome || !senha || !cargo) return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
+
+    const sql = 'INSERT INTO usuarios (nome, senha, cargo) VALUES (?, ?, ?)';
+    db.run(sql, [nome, senha, cargo], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ id: this.lastID });
+    });
+});
+
+app.put('/api/usuarios/:id', (req, res) => {
+    const { nome, senha, cargo } = req.body;
+    const { id } = req.params;
+
+    if (!nome || !cargo) {
+        return res.status(400).json({ error: 'Nome e cargo são obrigatórios.' });
+    }
+
+    // Se a senha for fornecida, atualiza. Senão, mantém a antiga.
+    let sql = 'UPDATE usuarios SET nome = ?, cargo = ? WHERE id = ?';
+    let params = [nome, cargo, id];
+
+    if (senha) {
+        sql = 'UPDATE usuarios SET nome = ?, senha = ?, cargo = ? WHERE id = ?';
+        params = [nome, senha, cargo, id];
+    }
+
+    db.run(sql, params, function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ changes: this.changes });
+    });
+});
+
+app.delete('/api/usuarios/:id', (req, res) => {
+    const { id } = req.params;
+    db.run('DELETE FROM usuarios WHERE id = ?', id, function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ deleted: this.changes });
+    });
+});
+
+
+// --- CRUD de Mesas ---
+app.get('/api/mesas', (req, res) => {
+    const sql = 'SELECT * FROM mesas ORDER BY numero';
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/mesas', (req, res) => {
+    const { numero } = req.body;
+    if (!numero) return res.status(400).json({ error: 'O número da mesa é obrigatório.' });
+
+    db.run('INSERT INTO mesas (numero) VALUES (?)', [numero], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ id: this.lastID });
+    });
+});
+
+app.delete('/api/mesas/:id', (req, res) => {
+    const { id } = req.params;
+    db.run('DELETE FROM mesas WHERE id = ?', id, function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ deleted: this.changes });
     });
 });
 

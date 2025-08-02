@@ -1,11 +1,17 @@
 body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f4;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
     margin: 0;
+    padding: 2rem 0; /* Adiciona um pouco de espaço vertical */
+}
+
+/* Ajuste para o container de login ainda ficar centralizado */
+.login-container {
+    margin: auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .login-container {
@@ -98,7 +104,64 @@ header {
 }
 
 .mesa.ocupada {
-    background-color: #dc3545;
+    background-color: #dc3545; /* Vermelho */
+}
+
+.mesa.pagamento-pendente {
+    background-color: #fd7e14; /* Laranja */
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(253, 126, 20, 0.7);
+    }
+    70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 10px 15px rgba(253, 126, 20, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(253, 126, 20, 0);
+    }
+}
+
+.header-actions {
+    margin-bottom: 1rem;
+}
+
+#fila-pagamentos-btn.alerta {
+    background-color: #fd7e14; /* Laranja */
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+.pagamento-card {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-left: 5px solid #007bff;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pagamento-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.total-selecionado-dinamico {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #28a745;
+    text-align: center;
+    margin: 1rem 0;
+    padding: 0.5rem;
+    background-color: #e8f5e9;
+    border-radius: 4px;
 }
 
 .gestao-section {

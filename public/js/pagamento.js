@@ -1,63 +1,105 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const mesaId = parseInt(urlParams.get('mesa'));
-    const itensParaPagarIds = JSON.parse(localStorage.getItem('itensParaPagar'));
+    const pagamentoId = parseInt(urlParams.get('pagamentoId'));
+    const modo = urlParams.get('modo');
 
-    if (!mesaId || !itensParaPagarIds || itensParaPagarIds.length === 0) {
-        window.location.href = `comanda.html?mesa=${mesaId}`;
+    if (!mesaId || !pagamentoId || modo !== 'confirmacao') {
+        window.location.href = `mesas.html`;
         return;
     }
 
-    const itensAPagarDiv = document.getElementById('itens-a-pagar');
-    const totalAPagarDiv = document.getElementById('total-a-pagar');
-    const confirmarPagamentoButton = document.getElementById('confirmar-pagamento-button');
+    const mainContent = document.getElementById('pagamento-main');
+    const title = document.getElementById('pagamento-title');
+    title.textContent = `Confirmar Pagamento #${pagamentoId}`;
 
-    let totalAPagar = 0;
+    document.getElementById('voltar-comanda-btn').onclick = () => {
+        window.location.href = `comanda.html?mesa=${mesaId}`;
+    };
 
-    try {
-        // Para obter os detalhes dos itens, buscamos a comanda inteira novamente.
-        // Numa aplicação maior, poderíamos ter um endpoint específico para buscar itens por ID.
-        const response = await fetch(`http://localhost:3000/api/comandas/${mesaId}`);
-        const data = await response.json();
-        const todosOsItens = data.itens;
+    async function carregarDetalhesPagamento() {
+        try {
+            // A API de pagamentos pendentes busca todos, então vamos filtrar aqui
+            const response = await fetch('http://localhost:3000/api/pagamentos-pendentes');
+            const pagamentos = await response.json();
+            const pagamentoAtual = pagamentos.find(p => p.id === pagamentoId);
 
-        const itensFiltrados = todosOsItens.filter(item => itensParaPagarIds.includes(String(item.id)));
-
-        itensAPagarDiv.innerHTML = '<h2>Itens a Pagar</h2>';
-        itensFiltrados.forEach(item => {
-            const itemValor = item.preco * item.quantidade;
-            totalAPagar += itemValor;
-            const itemElement = document.createElement('div');
-            itemElement.textContent = `${item.quantidade}x ${item.nome} - R$ ${itemValor.toFixed(2)}`;
-            itensAPagarDiv.appendChild(itemElement);
-        });
-
-        totalAPagarDiv.textContent = `Total a Pagar: R$ ${totalAPagar.toFixed(2)}`;
-
-    } catch (error) {
-        console.error('Erro ao buscar detalhes dos itens:', error);
-        itensAPagarDiv.innerHTML = '<p>Erro ao carregar itens. Tente novamente.</p>';
-        confirmarPagamentoButton.disabled = true;
+            if (pagamentoAtual) {
+                // Para pegar os itens, precisamos da comanda
+                const comandaResponse = await fetch(`http://localhost:3000/api/comandas/${pagamentoAtual.comanda_id}`);
+                const comandaData = await comandaResponse.json();
+                renderPagamento(pagamentoAtual, comandaData.itens);
+            } else {
+                mainContent.innerHTML = '<p>Este pagamento não está mais pendente ou não existe.</p>';
+            }
+        } catch (error) {
+            console.error('Erro ao carregar detalhes do pagamento:', error);
+            mainContent.innerHTML = '<p>Erro ao carregar dados.</p>';
+        }
     }
 
-    confirmarPagamentoButton.addEventListener('click', async () => {
-        try {
-            const response = await fetch('http://localhost:3000/api/pagamentos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ itemIds: itensParaPagarIds }),
-            });
+    function renderPagamento(pagamento, todosOsItens) {
+        mainContent.innerHTML = '';
+        const pagamentoDiv = document.createElement('div');
+        pagamentoDiv.className = 'pagamento-card-detalhe';
 
+        const itensDoPagamento = todosOsItens.filter(item => item.pagamento_id === pagamento.id);
+        let itensHtml = '<ul>';
+        itensDoPagamento.forEach(item => {
+            itensHtml += `<li>${item.quantidade}x ${item.nome}</li>`;
+        });
+        itensHtml += '</ul>';
+
+        pagamentoDiv.innerHTML = `
+            <h3>Mesa ${pagamento.mesa_numero}</h3>
+            <p><strong>Cliente:</strong> ${pagamento.nome_cliente}</p>
+            <p><strong>Valor Total:</strong> R$ ${pagamento.valor_total.toFixed(2)}</p>
+            <p><strong>Forma de Pagamento:</strong> ${pagamento.forma_pagamento}</p>
+            <h4>Itens Incluídos:</h4>
+            ${itensHtml}
+            <div class="botoes-confirmacao">
+                <button class="confirmar-btn" data-pagamento-id="${pagamento.id}">Confirmar Pagamento</button>
+                <button class="negar-btn" data-pagamento-id="${pagamento.id}">Negar Pagamento</button>
+            </div>
+        `;
+        mainContent.appendChild(pagamentoDiv);
+
+        document.querySelector('.confirmar-btn').addEventListener('click', confirmarPagamento);
+        document.querySelector('.negar-btn').addEventListener('click', negarPagamento);
+    }
+
+    async function confirmarPagamento(event) {
+        const pagamentoId = event.target.dataset.pagamentoId;
+        try {
+            const response = await fetch(`http://localhost:3000/api/confirmar-pagamento/${pagamentoId}`, { method: 'POST' });
             if (response.ok) {
-                alert('Pagamento confirmado com sucesso!');
-                localStorage.removeItem('itensParaPagar');
-                window.location.href = `comanda.html?mesa=${mesaId}`;
+                alert('Pagamento confirmado!');
+                window.location.href = `fila-pagamentos.html`;
             } else {
-                alert('Ocorreu um erro ao processar o pagamento.');
+                alert('Erro ao confirmar pagamento.');
             }
         } catch (error) {
             console.error('Falha ao confirmar pagamento:', error);
-            alert('Erro de comunicação com o servidor.');
         }
-    });
+    }
+
+    async function negarPagamento(event) {
+        const pagamentoId = event.target.dataset.pagamentoId;
+        if (!confirm('Tem certeza que deseja negar este pagamento? Os itens voltarão para a comanda.')) {
+            return;
+        }
+        try {
+            const response = await fetch(`http://localhost:3000/api/negar-pagamento/${pagamentoId}`, { method: 'POST' });
+            if (response.ok) {
+                alert('Pagamento negado.');
+                window.location.href = `fila-pagamentos.html`;
+            } else {
+                alert('Erro ao negar pagamento.');
+            }
+        } catch (error) {
+            console.error('Falha ao negar pagamento:', error);
+        }
+    }
+
+    await carregarDetalhesPagamento();
 });

@@ -24,8 +24,22 @@
                 </form>
             </div>
 
-            <div id="cliente-controls">
-                <button id="pagar-button">Pagar Itens Selecionados</button>
+            <div id="cliente-controls" style="display: none;">
+                <div class="pagamento-options">
+                    <input type="text" id="nome-cliente-input" placeholder="Seu nome para o pagamento" required>
+                    <h3>Forma de Pagamento</h3>
+                    <select id="forma-pagamento-select">
+                        <option value="credito">Cartão de Crédito</option>
+                        <option value="debito">Cartão de Débito</option>
+                        <option value="pix">PIX</option>
+                        <option value="dinheiro">Dinheiro</option>
+                    </select>
+                </div>
+                <button id="solicitar-pagamento-button">Solicitar Pagamento</button>
+            </div>
+
+            <div id="funcionario-view">
+                <!-- Conteúdo para funcionários, como o botão de pagamentos pendentes -->
             </div>
         </main>
     </div>
