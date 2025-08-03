@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function carregarFila() {
         try {
-            const response = await fetch('http://localhost:3000/api/pagamentos-pendentes');
+            const response = await fetch('/api/pagamentos-pendentes');
             const pagamentos = await response.json();
 
             filaContainer.innerHTML = '';

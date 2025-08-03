@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function carregarComanda() {
         try {
-            const response = await fetch(`http://localhost:3000/api/comandas/${mesaId}`);
+            const response = await fetch(`/api/comandas/${mesaId}`);
             comandaData = await response.json();
             renderComanda();
             verificarPagamentosPendentes();
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function carregarProdutosParaSelect() {
         try {
-            const response = await fetch('http://localhost:3000/api/produtos');
+            const response = await fetch('/api/produtos');
             const produtos = await response.json();
             produtoSelect.innerHTML = '';
             produtos.forEach(produto => {
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const quantidade = document.getElementById('item-quantidade').value;
 
         try {
-            const response = await fetch(`http://localhost:3000/api/comandas/${comandaData.comandaId}/itens`, {
+            const response = await fetch(`/api/comandas/${comandaData.comandaId}/itens`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ produtoId, quantidade }),
@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const formaPagamento = formaPagamentoSelect.value;
 
         try {
-            const response = await fetch('http://localhost:3000/api/solicitar-pagamento', {
+            const response = await fetch('/api/solicitar-pagamento', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -217,15 +217,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     let comandaHash = '';
     async function iniciarPolling() {
         try {
-            const response = await fetch(`http://localhost:3000/api/comandas/${mesaId}/hash`);
+            const response = await fetch(`/api/comandas/${mesaId}/hash`);
             const data = await response.json();
 
-            // Na primeira vez, apenas armazena o hash
+            const novoHash = data.hash || '';
+
+            // Na primeira vez ou se não houver hash, apenas armazena
             if (comandaHash === '') {
-                comandaHash = data.hash;
-            } else if (comandaHash !== data.hash) {
-                // Se o hash mudou, recarrega a página para mostrar as atualizações
-                location.reload();
+                comandaHash = novoHash;
+            } else if (comandaHash !== novoHash) {
+                // Se o hash mudou, atualiza o hash local e recarrega a comanda suavemente
+                comandaHash = novoHash;
+                await carregarComanda();
             }
         } catch (error) {
             console.error('Erro no polling:', error);
@@ -236,7 +239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const itemId = event.target.dataset.itemId;
         if (confirm('Tem certeza que deseja remover este item?')) {
             try {
-                const response = await fetch(`http://localhost:3000/api/itens-comanda/${itemId}`, { method: 'DELETE' });
+                const response = await fetch(`/api/itens-comanda/${itemId}`, { method: 'DELETE' });
                 if (response.ok) {
                     await carregarComanda();
                 } else {

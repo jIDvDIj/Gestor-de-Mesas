@@ -1,6 +1,8 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -8,19 +10,30 @@ const PORT = process.env.PORT || 3000;
 // Middlewares
 app.use(cors());
 app.use(express.json()); // Para parsear o corpo das requisições em JSON
+app.use(express.static('public')); // Servir arquivos estáticos da pasta public
 
-// Conexão com o banco de dados
-const db = new sqlite3.Database('./db/database.db', (err) => {
+// --- Configuração do Banco de Dados ---
+// O caminho do banco de dados pode ser definido por uma variável de ambiente,
+// o que é útil para ambientes de produção como o Render.
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'db', 'database.db');
+
+// Garante que o diretório do banco de dados exista
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
+
+const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
-        console.error('Erro ao conectar ao banco de dados:', err.message);
+        console.error('Erro ao conectar ao banco de dados:', err.message, `(Caminho: ${dbPath})`);
     } else {
         console.log('Conectado ao banco de dados SQLite.');
     }
 });
 
-// Rota de teste
+// Rota para a página inicial - serve o login.html
 app.get('/', (req, res) => {
-    res.send('Backend do Restaurante está funcionando!');
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 // --- Endpoints da API ---
