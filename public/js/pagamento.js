@@ -20,13 +20,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function carregarDetalhesPagamento() {
         try {
             // A API de pagamentos pendentes busca todos, então vamos filtrar aqui
-            const response = await fetch('http://localhost:3000/api/pagamentos-pendentes');
+            const response = await fetch('/api/pagamentos-pendentes');
             const pagamentos = await response.json();
             const pagamentoAtual = pagamentos.find(p => p.id === pagamentoId);
 
             if (pagamentoAtual) {
                 // Para pegar os itens, precisamos da comanda
-                const comandaResponse = await fetch(`http://localhost:3000/api/comandas/${pagamentoAtual.comanda_id}`);
+                const comandaResponse = await fetch(`/api/comandas/${pagamentoAtual.comanda_id}`);
                 const comandaData = await comandaResponse.json();
                 renderPagamento(pagamentoAtual, comandaData.itens);
             } else {
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function confirmarPagamento(event) {
         const pagamentoId = event.target.dataset.pagamentoId;
         try {
-            const response = await fetch(`http://localhost:3000/api/confirmar-pagamento/${pagamentoId}`, { method: 'POST' });
+            const response = await fetch(`/api/confirmar-pagamento/${pagamentoId}`, { method: 'POST' });
             if (response.ok) {
                 alert('Pagamento confirmado!');
                 window.location.href = `fila-pagamentos.html`;
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         try {
-            const response = await fetch(`http://localhost:3000/api/negar-pagamento/${pagamentoId}`, { method: 'POST' });
+            const response = await fetch(`/api/negar-pagamento/${pagamentoId}`, { method: 'POST' });
             if (response.ok) {
                 alert('Pagamento negado.');
                 window.location.href = `fila-pagamentos.html`;

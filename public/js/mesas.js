@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function carregarStatusMesas() {
         try {
-            const response = await fetch('http://localhost:3000/api/status-mesas');
+            const response = await fetch('/api/status-mesas');
             const mesas = await response.json();
 
             mesasGrid.innerHTML = ''; // Limpa o grid

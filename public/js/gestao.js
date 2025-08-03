@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function carregarMesas() {
         try {
-            const response = await fetch('http://localhost:3000/api/mesas');
+            const response = await fetch('/api/mesas');
             const mesas = await response.json();
             renderMesas(mesas);
         } catch (error) {
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const linkButton = document.createElement('button');
             linkButton.textContent = 'Gerar Link';
             linkButton.onclick = () => {
-                const url = `${window.location.origin}/public/comanda.html?mesa=${mesa.id}`;
+                const url = `${window.location.origin}/comanda.html?mesa=${mesa.id}`;
                 prompt(`Link de acesso para a Mesa ${mesa.numero}:`, url);
             };
 
@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const numero = parseInt(mesaNumeroInput.value);
         try {
-            await fetch('http://localhost:3000/api/mesas', {
+            await fetch('/api/mesas', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ numero }),
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function removerMesa(id) {
         if (confirm(`Tem certeza que deseja remover a mesa ${id}?`)) {
             try {
-                await fetch(`http://localhost:3000/api/mesas/${id}`, { method: 'DELETE' });
+                await fetch(`/api/mesas/${id}`, { method: 'DELETE' });
                 carregarMesas();
             } catch (error) {
                 console.error('Erro ao remover mesa:', error);
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function carregarFuncionarios() {
         try {
-            const response = await fetch('http://localhost:3000/api/usuarios');
+            const response = await fetch('/api/usuarios');
             const funcionarios = await response.json();
             renderFuncionarios(funcionarios);
         } catch (error) {
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cargo = funcionarioCargoSelect.value;
 
         try {
-            await fetch('http://localhost:3000/api/usuarios', {
+            await fetch('/api/usuarios', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nome, senha, cargo }),
@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            await fetch(`http://localhost:3000/api/usuarios/${id}`, {
+            await fetch(`/api/usuarios/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
@@ -163,9 +163,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function removerFuncionario(event) {
         const id = event.target.dataset.id;
+        const userLi = event.target.closest('li');
+        const userText = userLi.querySelector('span').textContent;
+        const isGerente = userText.includes('gerente');
+
+        if (isGerente) {
+            const gerentes = Array.from(document.querySelectorAll('#funcionarios-list li'))
+                                .filter(li => li.querySelector('span').textContent.includes('gerente'));
+            if (gerentes.length <= 1) {
+                alert('Não é possível remover o último gerente do sistema.');
+                return;
+            }
+        }
+
         if (confirm('Tem certeza que deseja remover este funcionário?')) {
             try {
-                await fetch(`http://localhost:3000/api/usuarios/${id}`, { method: 'DELETE' });
+                await fetch(`/api/usuarios/${id}`, { method: 'DELETE' });
                 carregarFuncionarios();
             } catch (error) {
                 console.error('Erro ao remover funcionário:', error);
@@ -181,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function carregarProdutos() {
         try {
-            const response = await fetch('http://localhost:3000/api/produtos');
+            const response = await fetch('/api/produtos');
             const produtos = await response.json();
             renderProdutos(produtos);
         } catch (error) {
@@ -209,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const preco = parseFloat(produtoPrecoInput.value);
 
         try {
-            const response = await fetch('http://localhost:3000/api/produtos', {
+            const response = await fetch('/api/produtos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nome, preco }),
@@ -233,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     gerarRelatorioBtn.addEventListener('click', async () => {
         try {
-            const response = await fetch('http://localhost:3000/api/relatorio-vendas');
+            const response = await fetch('/api/relatorio-vendas');
             const relatorio = await response.json();
 
             let html = `<h4>Total Geral: R$ ${relatorio.totalGeral.toFixed(2)}</h4><ul>`;
